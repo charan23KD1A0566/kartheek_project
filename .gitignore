@@ -69,3 +69,5 @@ htmlcov/
 # Misc
 .cache/
 *.tmp
+
+127.0.0.1/
