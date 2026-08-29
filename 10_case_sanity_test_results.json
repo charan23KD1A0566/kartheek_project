@@ -1,0 +1,260 @@
+{
+  "timestamp": "2026-08-29T13:08:23.893662",
+  "test_cases": [
+    {
+      "id": 1,
+      "name": "SAFE ELECTRICAL WORK",
+      "text": "Electrical maintenance was performed after the equipment was isolated, locked out and tagged. Zero energy was verified before the worker started the task.",
+      "expected_semantic": "SAFE / NO SIF",
+      "explanation": "Model should recognize effective controls (isolation + lockout + zero energy verification)"
+    },
+    {
+      "id": 2,
+      "name": "DANGEROUS ELECTRICAL EXPOSURE",
+      "text": "Worker entered an energized electrical area without completing lockout and isolation. The equipment remained energized while maintenance was being performed.",
+      "expected_semantic": "DANGEROUS / SIF YES / HIGH OR CRITICAL",
+      "explanation": "Model should identify: energized equipment, exposure, missing isolation, LOTO failure"
+    },
+    {
+      "id": 3,
+      "name": "SAFE CONFINED SPACE PREPARATION",
+      "text": "The confined-space entry permit was approved before work. Atmospheric testing was completed, ventilation was established, and the rescue plan and trained attendant were confirmed.",
+      "expected_semantic": "SAFE / NO SIF",
+      "explanation": "Must NOT interpret presence of 'confined space', 'atmospheric testing', 'rescue plan' as automatically dangerous"
+    },
+    {
+      "id": 4,
+      "name": "DANGEROUS CONFINED SPACE ENTRY",
+      "text": "Worker entered a confined space without atmospheric testing or an approved permit. No trained attendant or rescue arrangement was available.",
+      "expected_semantic": "DANGEROUS / SIF YES / HIGH OR CRITICAL",
+      "explanation": "Should identify: confined-space entry, no atmospheric testing, permit failure, missing rescue controls"
+    },
+    {
+      "id": 5,
+      "name": "SAFE WORKING AT HEIGHT",
+      "text": "Worker performed roof maintenance using inspected scaffolding, complete guardrails and an approved fall-arrest harness. The equipment was inspected before use.",
+      "expected_semantic": "SAFE / NO SIF",
+      "explanation": "Must distinguish controlled work from fall exposure"
+    },
+    {
+      "id": 6,
+      "name": "FALL PROTECTION FAILURE",
+      "text": "Worker performed roof work near an unprotected edge without a harness, guardrail or other fall protection system.",
+      "expected_semantic": "DANGEROUS / SIF YES / HIGH OR CRITICAL",
+      "explanation": "Should identify: working at height, unprotected edge, missing fall protection"
+    },
+    {
+      "id": 7,
+      "name": "SAFE LIFTING OPERATION",
+      "text": "The lifting zone was barricaded and access was restricted. The crane was inspected and the load was secured before lifting. No person was permitted beneath the suspended load.",
+      "expected_semantic": "SAFE / NO SIF",
+      "explanation": "Must not classify as dangerous simply because crane/lifting/suspended load appear in text"
+    },
+    {
+      "id": 8,
+      "name": "LINE-OF-FIRE EXPOSURE",
+      "text": "A suspended load moved over an occupied work area while a worker remained directly underneath it. No exclusion zone or barricade was established.",
+      "expected_semantic": "DANGEROUS / SIF YES / HIGH OR CRITICAL",
+      "explanation": "Should identify: suspended load, worker underneath, exposure, missing exclusion zone/barrier"
+    },
+    {
+      "id": 9,
+      "name": "AMBIGUOUS / INSUFFICIENT INFORMATION",
+      "text": "Electrical maintenance activity was observed in the work area. The report does not state whether the equipment was isolated or whether the worker was exposed to hazardous energy.",
+      "expected_semantic": "UNCERTAIN or appropriately low-confidence result",
+      "explanation": "Should recognize critical information is missing. Do not force YES or NO."
+    },
+    {
+      "id": 10,
+      "name": "SAFE REPORT WITH DANGEROUS-SOUNDING KEYWORDS",
+      "text": "Worker used PPE while performing routine electrical maintenance. The equipment was isolated before work, the permit was verified, all safeguards were checked, and no hazardous exposure occurred.",
+      "expected_semantic": "SAFE / NO SIF",
+      "explanation": "MOST IMPORTANT: Must understand CONTEXT. Must NOT blindly classify as dangerous due to safety keywords."
+    }
+  ],
+  "results": [
+    {
+      "test_id": 1,
+      "test_name": "SAFE ELECTRICAL WORK",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.04213981065427935,
+      "confidence": 96,
+      "risk_level": "LOW",
+      "hazards": [],
+      "control_failures": [],
+      "evidence_count": 2,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Worker exposure identified: Proximity. Key evidence: electrical maintenance was performed after the equipment was isolated, locked out and tagged...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 2,
+      "test_name": "DANGEROUS ELECTRICAL EXPOSURE",
+      "status": "SUCCESS",
+      "sif_status": "YES",
+      "sif_probability": 0.970574839248745,
+      "confidence": 97,
+      "risk_level": "CRITICAL",
+      "hazards": [
+        "HAZARDOUS_ENERGY"
+      ],
+      "control_failures": [
+        "LOTO/Isolation Failure"
+      ],
+      "evidence_count": 2,
+      "explanation": "Potential SIF precursor detected. The report describes exposure to a significant hazard combined with critical control failure(s). Detected hazards: HAZARDOUS_ENERGY. Worker exposure identified: Proximity. Critical control failures: LOTO/Isolation Failure. Key evidence: worker entered an energized electrical area without completing lockout and isolation...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 3,
+      "test_name": "SAFE CONFINED SPACE PREPARATION",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.09423994284201874,
+      "confidence": 91,
+      "risk_level": "LOW",
+      "hazards": [
+        "CONFINED_SPACE"
+      ],
+      "control_failures": [],
+      "evidence_count": 2,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Detected hazards: CONFINED_SPACE. Key evidence: the confined-space entry permit was approved before work...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 4,
+      "test_name": "DANGEROUS CONFINED SPACE ENTRY",
+      "status": "SUCCESS",
+      "sif_status": "YES",
+      "sif_probability": 0.8002509412281436,
+      "confidence": 80,
+      "risk_level": "HIGH",
+      "hazards": [
+        "CONFINED_SPACE"
+      ],
+      "control_failures": [
+        "Lack of Monitoring"
+      ],
+      "evidence_count": 2,
+      "explanation": "Potential SIF precursor detected. The report describes exposure to a significant hazard combined with critical control failure(s). Detected hazards: CONFINED_SPACE. Worker exposure identified: Proximity. Critical control failures: Lack of Monitoring. Key evidence: worker entered a confined space without atmospheric testing or an approved permit...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 5,
+      "test_name": "SAFE WORKING AT HEIGHT",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.030898622986948752,
+      "confidence": 97,
+      "risk_level": "LOW",
+      "hazards": [
+        "WORKING_AT_HEIGHT"
+      ],
+      "control_failures": [],
+      "evidence_count": 2,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Detected hazards: WORKING_AT_HEIGHT. Worker exposure identified: Proximity. Key evidence: worker performed roof maintenance using inspected scaffolding, complete guardrails and an approved f...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 6,
+      "test_name": "FALL PROTECTION FAILURE",
+      "status": "SUCCESS",
+      "sif_status": "YES",
+      "sif_probability": 0.944759746970093,
+      "confidence": 94,
+      "risk_level": "HIGH",
+      "hazards": [
+        "WORKING_AT_HEIGHT"
+      ],
+      "control_failures": [],
+      "evidence_count": 1,
+      "explanation": "Potential SIF precursor detected. The report describes exposure to a significant hazard combined with critical control failure(s). Detected hazards: WORKING_AT_HEIGHT. Worker exposure identified: Partial Exposure. Key evidence: worker performed roof work near an unprotected edge without a harness, guardrail or other fall prote...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 7,
+      "test_name": "SAFE LIFTING OPERATION",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.29999137502456436,
+      "confidence": 70,
+      "risk_level": "MEDIUM",
+      "hazards": [
+        "LINE_OF_FIRE",
+        "VEHICLE_MOBILE_EQUIPMENT"
+      ],
+      "control_failures": [],
+      "evidence_count": 2,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Detected hazards: LINE_OF_FIRE, VEHICLE_MOBILE_EQUIPMENT. Key evidence: the crane was inspected and the load was secured before lifting...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 8,
+      "test_name": "LINE-OF-FIRE EXPOSURE",
+      "status": "SUCCESS",
+      "sif_status": "YES",
+      "sif_probability": 0.8439671253219553,
+      "confidence": 84,
+      "risk_level": "HIGH",
+      "hazards": [
+        "LINE_OF_FIRE"
+      ],
+      "control_failures": [],
+      "evidence_count": 1,
+      "explanation": "Potential SIF precursor detected. The report describes exposure to a significant hazard combined with critical control failure(s). Detected hazards: LINE_OF_FIRE. Worker exposure identified: Proximity. Key evidence: a suspended load moved over an occupied work area while a worker remained directly underneath it...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 9,
+      "test_name": "AMBIGUOUS / INSUFFICIENT INFORMATION",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.10665141628608063,
+      "confidence": 89,
+      "risk_level": "LOW",
+      "hazards": [],
+      "control_failures": [],
+      "evidence_count": 1,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Worker exposure identified: Full Exposure. Key evidence: the report does not state whether the equipment was isolated or whether the worker was exposed to ha...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    },
+    {
+      "test_id": 10,
+      "test_name": "SAFE REPORT WITH DANGEROUS-SOUNDING KEYWORDS",
+      "status": "SUCCESS",
+      "sif_status": "NO",
+      "sif_probability": 0.05026184564132916,
+      "confidence": 95,
+      "risk_level": "LOW",
+      "hazards": [
+        "CONFINED_SPACE"
+      ],
+      "control_failures": [],
+      "evidence_count": 2,
+      "explanation": "No SIF precursor indicators detected. Report does not indicate exposure to high-risk hazards with control failures. Detected hazards: CONFINED_SPACE. Worker exposure identified: Proximity. Key evidence: worker used ppe while performing routine electrical maintenance...",
+      "model_type": "TFIDF_LOGISTIC",
+      "model_version": "1.0"
+    }
+  ],
+  "probabilities": [
+    0.04213981065427935,
+    0.970574839248745,
+    0.09423994284201874,
+    0.8002509412281436,
+    0.030898622986948752,
+    0.944759746970093,
+    0.29999137502456436,
+    0.8439671253219553,
+    0.10665141628608063,
+    0.05026184564132916
+  ]
+}

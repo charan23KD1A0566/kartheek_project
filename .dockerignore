@@ -1,0 +1,76 @@
+# .dockerignore - Exclude unnecessary files from Docker builds
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Node/npm
+node_modules/
+npm-debug.log
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Development
+.env
+.env.local
+.env.development
+localhost/
+127.0.0.1/
+
+# Documentation
+*.md
+DOCUMENTATION/
+GUIDE/
+docs/
+
+# Tests
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Misc
+.cache
+.pytest_cache
+.coverage
+htmlcov/
+.temp
+tmp/
+
+# Old builds
+frontend/dist
+frontend/build

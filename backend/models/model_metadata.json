@@ -1,0 +1,129 @@
+{
+  "model_type": "TFIDF_LOGISTIC_CALIBRATED",
+  "model_version": "2.0",
+  "training_timestamp": "2024",
+  "dataset": "data\\training_reports.csv",
+  "dataset_size": 771,
+  "class_distribution": {
+    "YES": 499,
+    "NO": 208,
+    "UNCERTAIN": 64
+  },
+  "class_percentages": {
+    "YES": 64.72,
+    "NO": 26.98,
+    "UNCERTAIN": 8.3
+  },
+  "train_size": 616,
+  "test_size": 155,
+  "train_test_ratio": "80/20 (stratified)",
+  "accuracy": 0.9355,
+  "metrics": {
+    "NO": {
+      "precision": 0.9211,
+      "recall": 0.8333,
+      "f1_score": 0.875,
+      "support": 42
+    },
+    "UNCERTAIN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 13
+    },
+    "YES": {
+      "precision": 0.9327,
+      "recall": 0.97,
+      "f1_score": 0.951,
+      "support": 100
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "NO",
+      "UNCERTAIN",
+      "YES"
+    ],
+    "matrix": [
+      [
+        35,
+        0,
+        7
+      ],
+      [
+        0,
+        13,
+        0
+      ],
+      [
+        3,
+        0,
+        97
+      ]
+    ],
+    "interpretation": {
+      "true_negatives": 35,
+      "false_positives_as_yes": 7,
+      "false_positives_as_uncertain": 0,
+      "total_correct_no": 35,
+      "true_positives": 97,
+      "false_negatives_as_uncertain": 0,
+      "false_negatives_as_no": 3,
+      "total_correct_yes": 97
+    }
+  },
+  "feature_extraction": {
+    "type": "TF-IDF with bigrams",
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 2,
+    "max_df": 0.95,
+    "sublinear_tf": true,
+    "stop_words": "english"
+  },
+  "base_classifier": {
+    "type": "Logistic Regression",
+    "max_iterations": 2000,
+    "class_weight": "balanced",
+    "solver": "lbfgs"
+  },
+  "calibration": {
+    "type": "Sigmoid",
+    "cv_folds": 5,
+    "purpose": "Correct probability scores to be well-calibrated"
+  },
+  "probability_stats": {
+    "YES_mean_prob": 0.8504,
+    "YES_min_prob": 0.3414,
+    "YES_max_prob": 0.9884,
+    "NO_mean_prob": 0.7225,
+    "NO_min_prob": 0.5019,
+    "NO_max_prob": 0.9805,
+    "UNCERTAIN_mean_prob": 0.9056,
+    "UNCERTAIN_min_prob": 0.5964,
+    "UNCERTAIN_max_prob": 0.9959
+  },
+  "usage": {
+    "predict_proba": "Use model.predict_proba(texts) to get calibrated probabilities",
+    "classes_order": [
+      "NO",
+      "UNCERTAIN",
+      "YES"
+    ],
+    "threshold_default": [
+      0.33,
+      0.33,
+      0.34
+    ],
+    "threshold_recommendation": "Adjust based on false-positive/negative cost trade-off"
+  },
+  "disclaimer": {
+    "production_ready": false,
+    "data_source": "Manually labeled demonstration data",
+    "certification": "Not certified for safety-critical decisions",
+    "human_review": "All SIF predictions require expert human review",
+    "liability": "This model is a decision-support tool only"
+  }
+}

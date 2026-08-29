@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sif_sentinel_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-sif_sentinel}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8000
+      DEBUG: ${DEBUG:-False}
+      FRONTEND_API_URL: ${FRONTEND_API_URL:-http://localhost}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+    depends_on:
+      - mongodb
+    networks:
+      - sif_sentinel_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./backend/models:/app/models:ro
+
+  # Frontend Web Service
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: sif_sentinel_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - sif_sentinel_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # MongoDB Database (for local development - use MongoDB Atlas in production)
+  mongodb:
+    image: mongo:7.0
+    container_name: sif_sentinel_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-sif_sentinel}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - sif_sentinel_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - "local"  # Only run when using local development profile
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  sif_sentinel_network:
+    driver: bridge
