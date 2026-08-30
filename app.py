@@ -1,6 +1,12 @@
 """
 SIF Sentinel - Streamlit App
 Main entry point: serves React frontend + runs FastAPI backend
+
+DEPLOYMENT NOTE:
+- Local: Frontend accesses backend at http://localhost:8000
+- Streamlit Cloud: Backend subprocess can't be accessed from browser directly
+  Solution: Deploy backend to a separate service (Railway, Render, etc.) and
+  update FRONTEND_API_URL environment variable.
 """
 
 import streamlit as st
@@ -15,14 +21,15 @@ import requests
 from urllib.parse import urljoin
 from streamlit.web.server import WebsocketHeaders
 
+# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Backend URL
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = "http://localhost:8000"
 
 # ============================================================================
-# PAGE CONFIG
+# STREAMLIT CONFIGURATION  
 # ============================================================================
 
 st.set_page_config(
@@ -129,18 +136,13 @@ html = html.replace(
     f'<style>{stylesheet}</style>'
 )
 
-# Inject API config - dynamically determine the API base URL
-# On Streamlit Cloud, the backend is accessible via localhost from the server process
-# but we need to proxy through Streamlit's own request handling
+# Inject API config
 html = html.replace("</head>", """
 <script>
-    // Detect if running on Streamlit Cloud (https) or local (http)
-    // On local: use localhost:8000
-    // On Cloud: use the same origin (Streamlit will need to proxy)
+    // Detect if running on Streamlit Cloud or locally
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const apiBase = isDev ? 'http://localhost:8000/api' : '/api';
-    window.API_CONFIG = { baseURL: apiBase };
-    console.log('API Base URL:', apiBase);
+    window.API_CONFIG = { baseURL: isDev ? 'http://localhost:8000/api' : '/api' };
+    console.log('SIF Sentinel - API Base URL:', window.API_CONFIG.baseURL, 'Environment:', isDev ? 'Dev' : 'Production');
 </script>
 </head>""")
 
