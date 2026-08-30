@@ -11,9 +11,15 @@ import socket
 import sys
 import subprocess
 import os
+import requests
+from urllib.parse import urljoin
+from streamlit.web.server import WebsocketHeaders
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Backend URL
+BACKEND_URL = "http://127.0.0.1:8000"
 
 # ============================================================================
 # PAGE CONFIG
@@ -56,16 +62,27 @@ def start_backend():
         if key in st.secrets and not environment.get(key):
             environment[key] = str(st.secrets[key])
     environment["PYTHONPATH"] = str(backend_path) + os.pathsep + environment.get("PYTHONPATH", "")
+    # Use localhost to allow both local and Streamlit Cloud access
     process = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--log-level", "error"],
+        [sys.executable, "-m", "uvicorn", "main:app", "--host", "localhost", "--port", "8000", "--log-level", "error"],
         cwd=str(backend_path),
         env=environment,
     )
-    time.sleep(2)
+    time.sleep(3)  # Give backend more time to start
     if process.poll() is not None:
         logger.error("FastAPI process exited during startup")
         return None
-    logger.info("Backend ready")
+    
+    # Verify backend is responding
+    try:
+        resp = requests.get("http://localhost:8000/api/health", timeout=5)
+        if resp.status_code == 200:
+            logger.info("✅ Backend verified and ready")
+        else:
+            logger.warning(f"Backend health check returned {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"Backend health check failed: {e}")
+    
     return process
 
 start_backend()
@@ -100,7 +117,7 @@ with open(str(css_file), 'r', encoding='utf-8') as f:
 # The production build may contain the deployment placeholder from Vite.
 javascript = javascript.replace(
     "https://YOUR_BACKEND_URL/api",
-    "http://localhost:8000/api"
+    "/api"
 )
 
 html = html.replace(
@@ -112,10 +129,18 @@ html = html.replace(
     f'<style>{stylesheet}</style>'
 )
 
-# Inject API config
+# Inject API config - dynamically determine the API base URL
+# On Streamlit Cloud, the backend is accessible via localhost from the server process
+# but we need to proxy through Streamlit's own request handling
 html = html.replace("</head>", """
 <script>
-    window.API_CONFIG = { baseURL: 'http://localhost:8000/api' };
+    // Detect if running on Streamlit Cloud (https) or local (http)
+    // On local: use localhost:8000
+    // On Cloud: use the same origin (Streamlit will need to proxy)
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const apiBase = isDev ? 'http://localhost:8000/api' : '/api';
+    window.API_CONFIG = { baseURL: apiBase };
+    console.log('API Base URL:', apiBase);
 </script>
 </head>""")
 
