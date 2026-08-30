@@ -18,7 +18,7 @@ export default function Header({ onMenuOpen }) {
   const location = useLocation()
   const [alerts, setAlerts] = useState([])
   const [isOpen, setIsOpen] = useState(false)
-  const canSeeAlerts = ['manager', 'safety_officer'].includes(user?.role)
+  const canSeeAlerts = ['MANAGER', 'SAFETY_OFFICER'].includes(user?.role)
 
   useEffect(() => {
     if (!canSeeAlerts) return undefined

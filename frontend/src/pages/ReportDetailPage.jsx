@@ -16,7 +16,7 @@ export default function ReportDetailPage() {
   const [modifiedSifStatus, setModifiedSifStatus] = useState('UNCERTAIN')
   const [modifiedRiskLevel, setModifiedRiskLevel] = useState('MEDIUM')
   const [comments, setComments] = useState('')
-  const canValidate = ['admin', 'safety_officer'].includes(JSON.parse(localStorage.getItem('user') || '{}').role)
+  const canValidate = ['ADMIN', 'SAFETY_OFFICER'].includes(JSON.parse(localStorage.getItem('user') || '{}').role)
 
   useEffect(() => {
     loadReport()

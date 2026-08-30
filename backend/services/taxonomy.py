@@ -26,7 +26,7 @@ class TaxonomyService:
         try:
             with open(TAXONOMY_PATH, 'r') as f:
                 cls._taxonomy = json.load(f)
-            logger.info("✓ Taxonomy loaded successfully")
+            logger.info("[OK] Taxonomy loaded successfully")
             return cls._taxonomy
         except FileNotFoundError:
             logger.error(f"Taxonomy file not found: {TAXONOMY_PATH}")

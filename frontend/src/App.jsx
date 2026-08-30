@@ -1,4 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import CursorFX from './components/CursorFX'
+import VisualEffects from './components/VisualEffects'
+import { MemoryRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/appStore'
 
 import LoginPage from './pages/LoginPage'
@@ -13,27 +15,126 @@ import TaxonomyPage from './pages/TaxonomyPage'
 import Layout from './components/Layout'
 
 function App() {
-  const { token, user } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+      {/* =====================================================
+          GLOBAL VISUAL EFFECTS
+          Cursor glow, cursor trail, click ripple,
+          particle/firework effects and other UI effects
+          ===================================================== */}
+      <VisualEffects />
 
-        {token ? (
+      <Routes>
+        {/* =====================================================
+            LOGIN
+            ===================================================== */}
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+        />
+
+        {/* =====================================================
+            AUTHENTICATED APPLICATION
+            ===================================================== */}
+        {isAuthenticated ? (
           <Route element={<Layout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/analysis" element={user?.role === 'employee' ? <AnalysisPage /> : <Navigate to="/" replace />} />
-            <Route path="/reports/new" element={user?.role === 'employee' ? <NewReportPage /> : <Navigate to="/" replace />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/reports/:id" element={<ReportDetailPage />} />
-            <Route path="/reports/:id/edit" element={<EditReportPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/taxonomy" element={<TaxonomyPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+
+            {/* Dashboard */}
+            <Route
+              path="/"
+              element={<DashboardPage />}
+            />
+
+            {/* =================================================
+                ANALYSIS
+                Employee-only
+                ================================================= */}
+            <Route
+              path="/analysis"
+              element={
+                user?.role === 'EMPLOYEE' ? (
+                  <AnalysisPage />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+
+            {/* =================================================
+                NEW REPORT
+                Employee-only
+                ================================================= */}
+            <Route
+              path="/reports/new"
+              element={
+                user?.role === 'EMPLOYEE' ? (
+                  <NewReportPage />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+
+            {/* =================================================
+                REPORTS
+                ================================================= */}
+            <Route
+              path="/reports"
+              element={<ReportsPage />}
+            />
+
+            {/* =================================================
+                REPORT DETAILS
+                ================================================= */}
+            <Route
+              path="/reports/:id"
+              element={<ReportDetailPage />}
+            />
+
+            {/* =================================================
+                EDIT REPORT
+                ================================================= */}
+            <Route
+              path="/reports/:id/edit"
+              element={<EditReportPage />}
+            />
+
+            {/* =================================================
+                ANALYTICS
+                ================================================= */}
+            <Route
+              path="/analytics"
+              element={<AnalyticsPage />}
+            />
+
+            {/* =================================================
+                TAXONOMY
+                ================================================= */}
+            <Route
+              path="/taxonomy"
+              element={<TaxonomyPage />}
+            />
+
+            {/* =================================================
+                UNKNOWN AUTHENTICATED ROUTE
+                ================================================= */}
+            <Route
+              path="*"
+              element={<Navigate to="/" replace />}
+            />
+
           </Route>
         ) : (
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          /* ===================================================
+             NOT AUTHENTICATED
+             Redirect everything to login
+             =================================================== */
+          <Route
+            path="*"
+            element={<Navigate to="/login" replace />}
+          />
         )}
       </Routes>
     </Router>

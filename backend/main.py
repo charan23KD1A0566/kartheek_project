@@ -12,15 +12,16 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import os
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 # Local imports
 from config import (
     FRONTEND_API_URL, DEBUG, JWT_SECRET, JWT_ALGORITHM, 
-    JWT_EXPIRATION_HOURS, SERVER_HOST, SERVER_PORT
+    JWT_EXPIRATION_HOURS, SERVER_HOST, SERVER_PORT, CORS_ORIGINS
 )
 from database import connect_to_mongo, close_mongo_connection, get_database
 from models import (
-    LoginRequest, LoginResponse, UserResponse, SafetyReportCreate, SafetyReportUpdate,
+    LoginRequest, LoginResponse, UserResponse, RegisterRequest, SafetyReportCreate, SafetyReportUpdate,
     AnalyzeRequest,
     SafetyReport, AIAnalysisResult, AIPrediction, HealthResponse,
     DashboardStats, DashboardData, AnalyticsData, HumanValidationInput,
@@ -60,14 +61,13 @@ def serialize_document(value):
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     # Startup
-    logger.info("🚀 SIF Sentinel starting up...")
+    logger.info("[START] SIF Sentinel starting up...")
     await connect_to_mongo()
     await seed_demo_data()
     yield
     # Shutdown
     logger.info("🛑 SIF Sentinel shutting down...")
     await close_mongo_connection()
-
 
 app = FastAPI(
     title="SIF Sentinel",
@@ -79,12 +79,8 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_API_URL,
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-    ],
+    allow_origins=[origin.strip() for origin in CORS_ORIGINS] + ["null"],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -96,21 +92,21 @@ app.add_middleware(
 @app.post("/api/auth/login", response_model=LoginResponse)
 async def login(credentials: LoginRequest):
     """User login"""
-    db = get_database()
-    
-    # Get user
-    user = await get_user_by_email(db, credentials.email)
-    if not user:
+    try:
+        db = get_database()
+        user = await get_user_by_email(db, str(credentials.email))
+        if not user or not user.get("is_active", True) or not verify_password(credentials.password, user.get("password_hash")):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    except HTTPException:
+        raise
+    except (RuntimeError, ConnectionError) as error:
+        logger.error(f"Login database unavailable: {error}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authentication service is temporarily unavailable")
+    except Exception as error:
+        logger.exception(f"Login failed unexpectedly: {error}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
-    
-    # Verify password
-    if not verify_password(credentials.password, user.get("password_hash")):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service failed while processing the request"
         )
     
     # Create token
@@ -119,16 +115,48 @@ async def login(credentials: LoginRequest):
         expires_delta=timedelta(hours=JWT_EXPIRATION_HOURS)
     )
     
-    logger.info(f"✓ User logged in: {credentials.email}")
+    logger.info(f"[OK] User logged in: {credentials.email}")
     
     return LoginResponse(
         access_token=access_token,
         user={
-            "user_id": user["user_id"],
+            "id": user["user_id"],
             "email": user["email"],
             "name": user["name"],
             "role": user["role"]
         }
+    )
+
+
+@app.post("/api/auth/register", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest):
+    """Create an employee account and issue a session token."""
+    if request.role != UserRole.EMPLOYEE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public registration is limited to employees")
+
+    try:
+        db = get_database()
+        email = str(request.email).strip().lower()
+        if await get_user_by_email(db, email):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
+        user = await create_user(db, email, request.password, request.name.strip(), UserRole.EMPLOYEE.value)
+    except HTTPException:
+        raise
+    except DuplicateKeyError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
+    except (RuntimeError, ConnectionError) as error:
+        logger.error(f"Registration database unavailable: {error}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Registration service is temporarily unavailable")
+    except Exception as error:
+        logger.exception(f"Registration failed unexpectedly: {error}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration service failed while creating the account")
+    token = create_access_token(
+        data={"sub": user["email"], "role": user["role"]},
+        expires_delta=timedelta(hours=JWT_EXPIRATION_HOURS)
+    )
+    return LoginResponse(
+        access_token=token,
+        user={"id": user["user_id"], "email": user["email"], "name": user["name"], "role": user["role"]}
     )
 
 
@@ -150,7 +178,7 @@ async def analyze_report(
     try:
         # Run analysis
         result = ai_engine.analyze_report(request.text)
-        logger.info(f"✓ Analysis complete: {result.sif_status}")
+        logger.info(f"[OK] Analysis complete: {result.sif_status}")
         return result
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -178,7 +206,7 @@ async def create_and_analyze_report(
         user = await get_user_by_email(db, token)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        if user.get("role") != "employee":
+        if user.get("role") != UserRole.EMPLOYEE.value:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only employees can create reports")
 
         # Create report
@@ -220,7 +248,7 @@ async def create_and_analyze_report(
                 "sif_probability": analysis.sif_probability,
                 "created_at": datetime.utcnow(),
                 "read": False,
-                "recipients": ["manager", "safety_officer"]
+                "recipients": [UserRole.MANAGER.value, UserRole.SAFETY_OFFICER.value]
             })
 
         await db.audit_logs.insert_one({
@@ -231,7 +259,7 @@ async def create_and_analyze_report(
             "timestamp": datetime.utcnow()
         })
         
-        logger.info(f"✓ Report created and analyzed: {report_id}")
+        logger.info(f"[OK] Report created and analyzed: {report_id}")
         
         return serialize_document({
             "report_id": report_id,
@@ -255,7 +283,7 @@ async def create_and_analyze_report(
 
 
 def _alert_user_can_access(user):
-    return user and user.get("role") in {"manager", "safety_officer"}
+    return user and user.get("role") in {UserRole.MANAGER.value, UserRole.SAFETY_OFFICER.value}
 
 
 @app.get("/api/alerts")
@@ -417,7 +445,7 @@ async def update_report(
         user = await get_user_by_email(db, token)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        if user.get("role") not in {"admin", "safety_officer"}:
+        if user.get("role") not in {UserRole.ADMIN.value, UserRole.SAFETY_OFFICER.value}:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authorization required")
 
         update_payload = {k: v for k, v in report_update.dict(exclude_unset=True).items() if v is not None}
@@ -439,7 +467,7 @@ async def update_report(
             "details": update_payload
         })
 
-        logger.info(f"✓ Report updated: {report_id}")
+        logger.info(f"[OK] Report updated: {report_id}")
         return serialize_document({"message": "Report updated successfully", "report_id": report_id})
 
     except Exception as e:
@@ -473,7 +501,7 @@ async def validate_report(
         user = await get_user_by_email(db, token)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        if user.get("role") not in {"admin", "safety_officer"}:
+        if user.get("role") not in {UserRole.ADMIN.value, UserRole.SAFETY_OFFICER.value}:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Safety-officer authorization required")
 
         prediction = await db.ai_predictions.find_one({"report_id": report_id}, {"sif_status": 1})
@@ -524,7 +552,7 @@ async def validate_report(
             "details": validation_data
         })
         
-        logger.info(f"✓ Report validated: {report_id}")
+        logger.info(f"[OK] Report validated: {report_id}")
         
         return serialize_document({
             "message": "Validation recorded successfully",
@@ -749,7 +777,8 @@ async def seed_demo_data():
                 "email": "admin@sifsentinel.demo",
                 "password_hash": hash_password("Admin@123"),
                 "name": "Admin User",
-                "role": "admin",
+                "role": UserRole.ADMIN.value,
+                "is_active": True,
                 "created_at": datetime.utcnow()
             },
             {
@@ -757,7 +786,8 @@ async def seed_demo_data():
                 "email": "safety@sifsentinel.demo",
                 "password_hash": hash_password("Safety@123"),
                 "name": "Safety Officer",
-                "role": "safety_officer",
+                "role": UserRole.SAFETY_OFFICER.value,
+                "is_active": True,
                 "created_at": datetime.utcnow()
             },
             {
@@ -765,7 +795,8 @@ async def seed_demo_data():
                 "email": "employee@sifsentinel.demo",
                 "password_hash": hash_password("Employee@123"),
                 "name": "Field Employee",
-                "role": "employee",
+                "role": UserRole.EMPLOYEE.value,
+                "is_active": True,
                 "created_at": datetime.utcnow()
             },
             {
@@ -773,7 +804,8 @@ async def seed_demo_data():
                 "email": "manager@sifsentinel.demo",
                 "password_hash": hash_password("Manager@123"),
                 "name": "Manager",
-                "role": "manager",
+                "role": UserRole.MANAGER.value,
+                "is_active": True,
                 "created_at": datetime.utcnow()
             },
         ]
@@ -781,10 +813,20 @@ async def seed_demo_data():
         for demo_user in demo_users:
             await db.users.update_one(
                 {"email": demo_user["email"]},
-                {"$setOnInsert": demo_user},
+                {"$set": {
+                    "name": demo_user["name"],
+                    "password_hash": demo_user["password_hash"],
+                    "role": demo_user["role"],
+                    "is_active": True,
+                    "updated_at": datetime.utcnow(),
+                }, "$setOnInsert": {
+                    "user_id": demo_user["user_id"],
+                    "email": demo_user["email"],
+                    "created_at": demo_user["created_at"],
+                }},
                 upsert=True
             )
-        logger.info(f"✓ Ensured {len(demo_users)} demo users")
+        logger.info(f"[OK] Ensured {len(demo_users)} demo users")
         
         # Create demo report
         demo_report_id = "demo-energized-equipment-001"
@@ -821,18 +863,18 @@ async def seed_demo_data():
                 {"$setOnInsert": demo_prediction},
                 upsert=True
             )
-            logger.info("✓ Ensured demo report with analysis")
+            logger.info("[OK] Ensured demo report with analysis")
         
-        # Seed taxonomy
+        # Seed taxonomygit --version
         taxonomy = TaxonomyService.load_taxonomy()
         await db.taxonomy.replace_one(
             {"_id": taxonomy.get("_id", "sif_taxonomy_v1")},
             taxonomy,
             upsert=True
         )
-        logger.info("✓ Taxonomy ensured")
+        logger.info("[OK] Taxonomy ensured")
         
-        logger.info("✓ Database seeding complete")
+        logger.info("[OK] Database seeding complete")
     
     except Exception as e:
         logger.error(f"Seeding error: {e}")

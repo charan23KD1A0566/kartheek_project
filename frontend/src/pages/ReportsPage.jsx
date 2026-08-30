@@ -16,8 +16,8 @@ export default function ReportsPage() {
   const [total, setTotal] = useState(0)
   const limit = 20
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
-  const canCreate = currentUser.role === 'employee'
-  const canEdit = ['admin', 'safety_officer'].includes(currentUser.role)
+  const canCreate = currentUser.role === 'EMPLOYEE'
+  const canEdit = ['ADMIN', 'SAFETY_OFFICER'].includes(currentUser.role)
 
   useEffect(() => {
     loadReports()

@@ -1,28 +1,40 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+
+console.log('[API] Configured base URL:', API_BASE_URL)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000,
 })
 
 // Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
-  if (token) {
+  if (token && !config.url?.includes('/auth/login') && !config.url?.includes('/auth/register')) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  console.log(`[API ${config.method.toUpperCase()}] ${config.url}`)
   return config
 })
 
 // Handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`[API] Response received: ${response.status}`)
+    return response
+  },
   (error) => {
-    if (error.response?.status === 401) {
+    console.error('[API] Error:', error.message)
+    console.error('[API] Response status:', error.response?.status)
+    console.error('[API] Response data:', error.response?.data)
+    
+    const isAuthRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register')
+    if (error.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem('access_token')
       localStorage.removeItem('user')
       window.location.href = '/login'
@@ -33,8 +45,14 @@ api.interceptors.response.use(
 
 // Auth endpoints
 export const authAPI = {
-  login: (email, password) =>
-    api.post('/auth/login', { email, password }),
+  login: (email, password) => {
+    console.log('[AUTH] Logging in with:', email)
+    return api.post('/auth/login', { email, password })
+  },
+  
+  register: (name, email, password, confirm_password) => {
+    return api.post('/auth/register', { name, email, password, confirm_password, role: 'EMPLOYEE' })
+  },
 }
 
 // Analysis endpoints

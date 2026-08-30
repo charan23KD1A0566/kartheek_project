@@ -15,7 +15,7 @@ async def connect_to_mongo():
 
     try:
         # Create MongoDB client
-        mongodb_client = AsyncIOMotorClient(MONGODB_URI)
+        mongodb_client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
 
         # Verify MongoDB connection
         await mongodb_client.admin.command("ping")
@@ -24,17 +24,17 @@ async def connect_to_mongo():
         mongodb_db = mongodb_client[MONGODB_DATABASE]
 
         logger.info(
-            f"✓ Connected to MongoDB: {MONGODB_DATABASE}"
+            f"[OK] Connected to MongoDB: {MONGODB_DATABASE}"
         )
 
         # Create indexes
         await create_indexes()
 
-        print("✓ MongoDB connected and indexes created")
+        print("[OK] MongoDB connected and indexes created")
 
     except Exception as e:
         logger.error(
-            f"✗ Failed to connect to MongoDB: {e}"
+            f"[FAIL] Failed to connect to MongoDB: {e}"
         )
 
         # Clean up if connection fails
@@ -58,11 +58,11 @@ async def close_mongo_connection():
             mongodb_client = None
             mongodb_db = None
 
-            logger.info("✓ MongoDB connection closed")
+            logger.info("[OK] MongoDB connection closed")
 
     except Exception as e:
         logger.error(
-            f"✗ Error closing MongoDB connection: {e}"
+            f"[FAIL] Error closing MongoDB connection: {e}"
         )
 
 
@@ -188,11 +188,11 @@ async def create_indexes():
         )
 
 
-        logger.info("✓ Indexes created successfully")
+        logger.info("[OK] Indexes created successfully")
 
     except Exception as e:
         logger.error(
-            f"✗ Error creating indexes: {e}"
+            f"[FAIL] Error creating indexes: {e}"
         )
 
 

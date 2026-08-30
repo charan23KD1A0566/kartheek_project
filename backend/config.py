@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Keep local and Streamlit Cloud configuration on the project-level .env.
+# Existing environment variables (including cloud secrets) take precedence.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 # MongoDB
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
@@ -15,6 +18,9 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4")
 # Frontend API
 FRONTEND_API_URL = os.getenv("FRONTEND_API_URL", "http://localhost:5173")
 
+# CORS Configuration
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
+
 # Security
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
@@ -22,7 +28,7 @@ if not JWT_SECRET:
         "JWT_SECRET is required. Set it in backend/.env before starting the API."
     )
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
 
 # Server
 DEBUG = os.getenv("DEBUG", "True") == "True"

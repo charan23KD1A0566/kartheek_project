@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-4" aria-label="Primary navigation">
-        {menuItems.filter((item) => user?.role === 'employee' || !['/reports/new', '/analysis'].includes(item.path)).map((item) => {
+        {menuItems.filter((item) => user?.role === 'EMPLOYEE' || !['/reports/new', '/analysis'].includes(item.path)).map((item) => {
           const Icon = item.icon
           const isActive =
             location.pathname === item.path ||

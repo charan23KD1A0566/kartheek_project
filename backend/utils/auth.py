@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -49,9 +49,9 @@ def create_access_token(
 
 
 async def verify_token(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)
 ) -> str:
-    """Verify JWT token and return user email"""
+    """Validate a JWT, confirm the active user, and return the email."""
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -59,11 +59,22 @@ async def verify_token(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    if credentials is None:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        role: str = payload.get("role")
+        if email is None or role is None:
             raise credentials_exception
-        return email
-    except JWTError:
+        from database import get_database
+        from utils.database_helpers import get_user_by_email
+        user = await get_user_by_email(get_database(), email)
+        if not user or not user.get("is_active", True):
+            raise credentials_exception
+        if user.get("role") != role:
+            raise credentials_exception
+        return user["email"]
+    except (JWTError, RuntimeError, KeyError):
         raise credentials_exception

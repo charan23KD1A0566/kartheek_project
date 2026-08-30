@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -26,10 +26,10 @@ class RiskLevel(str, Enum):
 
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    SAFETY_OFFICER = "safety_officer"
-    MANAGER = "manager"
-    EMPLOYEE = "employee"
+    ADMIN = "ADMIN"
+    SAFETY_OFFICER = "SAFETY_OFFICER"
+    MANAGER = "MANAGER"
+    EMPLOYEE = "EMPLOYEE"
 
 
 class ValidationDecision(str, Enum):
@@ -50,6 +50,20 @@ class ModelType(str, Enum):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class RegisterRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=120)
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    confirm_password: str = Field(..., min_length=8, max_length=128)
+    role: UserRole = UserRole.EMPLOYEE
+
+    @model_validator(mode="after")
+    def validate_passwords(self):
+        if self.password != self.confirm_password:
+            raise ValueError("Passwords do not match")
+        return self
 
 
 class LoginResponse(BaseModel):

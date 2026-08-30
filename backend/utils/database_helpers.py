@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def get_user_by_email(db: AsyncIOMotorDatabase, email: str) -> Optional[Dict]:
     """Get user by email"""
-    return await db.users.find_one({"email": email})
+    return await db.users.find_one({"email": email.strip().lower()})
 
 
 async def create_user(
@@ -22,16 +22,17 @@ async def create_user(
     email: str,
     password: str,
     name: str,
-    role: str = "safety_officer"
+    role: str = "EMPLOYEE"
 ) -> Dict:
     """Create new user"""
     
     user = {
         "user_id": str(uuid4()),
-        "email": email,
+        "email": email.strip().lower(),
         "password_hash": hash_password(password),
         "name": name,
         "role": role,
+        "is_active": True,
         "created_at": datetime.utcnow()
     }
     
