@@ -25,8 +25,12 @@ from streamlit.web.server import WebsocketHeaders
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Backend URL
-BACKEND_URL = "http://localhost:8000"
+# Backend URL - use external backend if provided, otherwise run locally
+BACKEND_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
+USING_EXTERNAL_BACKEND = BACKEND_URL != "http://localhost:8000"
+
+logger.info(f"Backend Mode: {'External' if USING_EXTERNAL_BACKEND else 'Local (subprocess)'}")
+logger.info(f"Backend URL: {BACKEND_URL}")
 
 # ============================================================================
 # STREAMLIT CONFIGURATION  
@@ -54,11 +58,15 @@ st.markdown("""
 
 @st.cache_resource
 def start_backend():
-    """Start FastAPI in a separate process so Streamlit reruns do not stop it."""
+    """Start FastAPI in a separate process (only if not using external backend)"""
+    if USING_EXTERNAL_BACKEND:
+        logger.info(f"✅ Using external backend: {BACKEND_URL}")
+        return None
+    
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if sock.connect_ex(('127.0.0.1', 8000)) == 0:
+    if sock.connect_ex(('localhost', 8000)) == 0:
         sock.close()
-        logger.info("Port 8000 in use")
+        logger.info("Port 8000 already in use, skipping backend startup")
         return None
     sock.close()
 
@@ -84,7 +92,7 @@ def start_backend():
     try:
         resp = requests.get("http://localhost:8000/api/health", timeout=5)
         if resp.status_code == 200:
-            logger.info("✅ Backend verified and ready")
+            logger.info("✅ Local backend verified and ready")
         else:
             logger.warning(f"Backend health check returned {resp.status_code}")
     except Exception as e:
@@ -137,12 +145,14 @@ html = html.replace(
 )
 
 # Inject API config
-html = html.replace("</head>", """
+html = html.replace("</head>", f"""
 <script>
-    // Detect if running on Streamlit Cloud or locally
+    // Configure API endpoint based on deployment mode
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.API_CONFIG = { baseURL: isDev ? 'http://localhost:8000/api' : '/api' };
-    console.log('SIF Sentinel - API Base URL:', window.API_CONFIG.baseURL, 'Environment:', isDev ? 'Dev' : 'Production');
+    const apiBase = '{BACKEND_URL}/api';
+    window.API_CONFIG = {{ baseURL: apiBase }};
+    console.log('[SIF Sentinel] Environment:', isDev ? 'Development' : 'Production');
+    console.log('[SIF Sentinel] API Base URL:', apiBase);
 </script>
 </head>""")
 
