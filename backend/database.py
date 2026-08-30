@@ -33,8 +33,9 @@ async def connect_to_mongo():
         print("[OK] MongoDB connected and indexes created")
 
     except Exception as e:
-        logger.error(
-            f"[FAIL] Failed to connect to MongoDB: {e}"
+        logger.warning(
+            f"[WARN] MongoDB connection failed (app will continue without DB): {e}. "
+            f"Make sure MONGODB_URI is set in environment variables."
         )
 
         # Clean up if connection fails

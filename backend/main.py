@@ -62,9 +62,7 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     # Startup
     logger.info("[START] SIF Sentinel starting up...")
-    await connect_to_mongo()
-    await seed_demo_data()
-    yield
+    try:\n        await connect_to_mongo()\n    except Exception as e:\n        logger.warning(f\"Could not connect to MongoDB during startup: {e}\")\n    try:\n        await seed_demo_data()\n    except Exception as e:\n        logger.warning(f\"Could not seed demo data: {e}\")\n    logger.info(\"[OK] SIF Sentinel is ready to serve requests\")\n    yield
     # Shutdown
     logger.info("🛑 SIF Sentinel shutting down...")
     await close_mongo_connection()

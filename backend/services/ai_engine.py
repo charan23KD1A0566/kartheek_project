@@ -40,10 +40,18 @@ class AIEngine:
 
     def __init__(self):
         """Initialize AI engine with taxonomy."""
-        self.taxonomy = TaxonomyService.load_taxonomy()
-        self.categories = TaxonomyService.get_categories()
-        self.patterns = TaxonomyService.get_precursor_patterns()
-        self.avoid_keywords = TaxonomyService.get_keywords_to_avoid()
+        try:
+            self.taxonomy = TaxonomyService.load_taxonomy()
+            self.categories = TaxonomyService.get_categories()
+            self.patterns = TaxonomyService.get_precursor_patterns()
+            self.avoid_keywords = TaxonomyService.get_keywords_to_avoid()
+            logger.info("[OK] AI Engine initialized with taxonomy")
+        except Exception as e:
+            logger.warning(f"Failed to load taxonomy for AI Engine: {e}. Using minimal defaults.")
+            self.taxonomy = TaxonomyService._get_fallback_taxonomy()
+            self.categories = self.taxonomy.get("categories", {})
+            self.patterns = self.taxonomy.get("precursor_patterns", [])
+            self.avoid_keywords = self.taxonomy.get("keywords_to_avoid", [])
         self.ml_model = self._load_ml_model()
 
     # =============================================================

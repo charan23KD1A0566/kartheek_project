@@ -19,7 +19,7 @@ class TaxonomyService:
     
     @classmethod
     def load_taxonomy(cls) -> Dict:
-        """Load taxonomy from JSON file"""
+        """Load taxonomy from JSON file, with safe fallback"""
         if cls._taxonomy:
             return cls._taxonomy
         
@@ -29,11 +29,27 @@ class TaxonomyService:
             logger.info("[OK] Taxonomy loaded successfully")
             return cls._taxonomy
         except FileNotFoundError:
-            logger.error(f"Taxonomy file not found: {TAXONOMY_PATH}")
-            raise
+            logger.warning(f"Taxonomy file not found: {TAXONOMY_PATH}. Using fallback taxonomy.")
+            cls._taxonomy = cls._get_fallback_taxonomy()
+            return cls._taxonomy
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid taxonomy JSON: {e}")
-            raise
+            logger.warning(f"Invalid taxonomy JSON: {e}. Using fallback taxonomy.")
+            cls._taxonomy = cls._get_fallback_taxonomy()
+            return cls._taxonomy
+    
+    @classmethod
+    def _get_fallback_taxonomy(cls) -> Dict:
+        """Return a minimal fallback taxonomy for demo/cloud environments"""
+        return {
+            "version": "1.0-fallback",
+            "categories": {
+                "hazard": {"label": "Hazard", "description": "Safety hazard"},
+                "exposure": {"label": "Exposure", "description": "Exposure to hazard"},
+                "control": {"label": "Control", "description": "Safety control"}
+            },
+            "precursor_patterns": [],
+            "keywords_to_avoid": []
+        }
     
     @classmethod
     def get_categories(cls) -> Dict:
