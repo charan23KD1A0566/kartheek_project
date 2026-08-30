@@ -18,8 +18,6 @@ import sys
 import subprocess
 import os
 import requests
-from urllib.parse import urljoin
-from streamlit.web.server import WebsocketHeaders
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
