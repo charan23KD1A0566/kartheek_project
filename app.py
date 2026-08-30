@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Backend URL - use external backend if provided, otherwise run locally
-BACKEND_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_API_URL", "https://sif-sentinel-backend.onrender.com")
 USING_EXTERNAL_BACKEND = BACKEND_URL != "http://localhost:8000"
 
 logger.info(f"Backend Mode: {'External' if USING_EXTERNAL_BACKEND else 'Local (subprocess)'}")

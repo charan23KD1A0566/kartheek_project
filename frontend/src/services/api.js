@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+const runtimeBaseURL = typeof window !== 'undefined' ? window.API_CONFIG?.baseURL : null
+const API_BASE_URL = runtimeBaseURL || import.meta.env.VITE_API_URL || '/api'
 
 console.log('[API] Configured base URL:', API_BASE_URL)
 

@@ -770,14 +770,13 @@ async def health_check():
 # ============ Seed Demo Data ============
 
 async def seed_demo_data():
-    """Seed database with demo users and data"""
+    """Seed database with demo users and data."""
     
     db = get_database()
     
     try:
         logger.info("Seeding database with demo data...")
         
-        # Create demo users
         demo_users = [
             {
                 "user_id": str(uuid4()),
@@ -815,11 +814,39 @@ async def seed_demo_data():
                 "is_active": True,
                 "created_at": datetime.utcnow()
             },
+            {
+                "user_id": str(uuid4()),
+                "email": "admin@sif.com",
+                "password_hash": hash_password("admin123"),
+                "name": "Admin User",
+                "role": UserRole.ADMIN.value,
+                "is_active": True,
+                "created_at": datetime.utcnow()
+            },
+            {
+                "user_id": str(uuid4()),
+                "email": "officer@sif.com",
+                "password_hash": hash_password("officer123"),
+                "name": "Safety Officer",
+                "role": UserRole.SAFETY_OFFICER.value,
+                "is_active": True,
+                "created_at": datetime.utcnow()
+            },
+            {
+                "user_id": str(uuid4()),
+                "email": "employee@sif.com",
+                "password_hash": hash_password("employee123"),
+                "name": "Field Employee",
+                "role": UserRole.EMPLOYEE.value,
+                "is_active": True,
+                "created_at": datetime.utcnow()
+            },
         ]
         
         for demo_user in demo_users:
+            normalized_email = str(demo_user["email"]).strip().lower()
             await db.users.update_one(
-                {"email": demo_user["email"]},
+                {"email": normalized_email},
                 {"$set": {
                     "name": demo_user["name"],
                     "password_hash": demo_user["password_hash"],
@@ -828,7 +855,7 @@ async def seed_demo_data():
                     "updated_at": datetime.utcnow(),
                 }, "$setOnInsert": {
                     "user_id": demo_user["user_id"],
-                    "email": demo_user["email"],
+                    "email": normalized_email,
                     "created_at": demo_user["created_at"],
                 }},
                 upsert=True
