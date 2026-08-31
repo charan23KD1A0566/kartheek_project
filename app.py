@@ -23,8 +23,9 @@ import requests
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Backend URL - use external backend if provided, otherwise run locally
-BACKEND_URL = os.getenv("BACKEND_API_URL", "https://sif-sentinel-backend.onrender.com")
+# Backend URL - use external backend if provided, otherwise run locally.
+# Guard against empty strings from deployment secrets so we never build an invalid URL.
+BACKEND_URL = (os.getenv("BACKEND_API_URL") or "https://sif-sentinel-backend.onrender.com").strip()
 USING_EXTERNAL_BACKEND = BACKEND_URL != "http://localhost:8000"
 
 logger.info(f"Backend Mode: {'External' if USING_EXTERNAL_BACKEND else 'Local (subprocess)'}")
@@ -147,7 +148,8 @@ html = html.replace("</head>", f"""
 <script>
     // Configure API endpoint based on deployment mode
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const apiBase = '{BACKEND_URL}/api';
+    const rawApiBase = '{BACKEND_URL}'.trim();
+    const apiBase = rawApiBase ? `${rawApiBase.replace(/\/$/, '')}/api` : 'https://sif-sentinel-backend.onrender.com/api';
     window.API_CONFIG = {{ baseURL: apiBase }};
     console.log('[SIF Sentinel] Environment:', isDev ? 'Development' : 'Production');
     console.log('[SIF Sentinel] API Base URL:', apiBase);

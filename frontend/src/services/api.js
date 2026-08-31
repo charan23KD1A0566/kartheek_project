@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 const runtimeBaseURL = typeof window !== 'undefined' ? window.API_CONFIG?.baseURL : null
-const API_BASE_URL = runtimeBaseURL || import.meta.env.VITE_API_URL || '/api'
+const rawBaseURL = (runtimeBaseURL || import.meta.env.VITE_API_URL || '/api').trim()
+const API_BASE_URL = rawBaseURL || 'https://sif-sentinel-backend.onrender.com/api'
 
 console.log('[API] Configured base URL:', API_BASE_URL)
 
